@@ -46,9 +46,9 @@
             this.checkBoxClean = new System.Windows.Forms.CheckBox();
             this.buttonClean = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.label4 = new System.Windows.Forms.Label();
-            this.numericUpDownClean = new System.Windows.Forms.NumericUpDown();
             this.label5 = new System.Windows.Forms.Label();
+            this.numericUpDownClean = new System.Windows.Forms.NumericUpDown();
+            this.label4 = new System.Windows.Forms.Label();
             this.timerCycle = new System.Windows.Forms.Timer(this.components);
             this.timerClean = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDownCycle)).BeginInit();
@@ -208,6 +208,7 @@
             this.buttonClean.TabIndex = 14;
             this.buttonClean.Text = "手动删";
             this.buttonClean.UseVisualStyleBackColor = true;
+            this.buttonClean.Click += new System.EventHandler(this.buttonClean_Click);
             // 
             // groupBox1
             // 
@@ -230,14 +231,14 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "配置项";
             // 
-            // label4
+            // label5
             // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(144, 99);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(37, 15);
-            this.label4.TabIndex = 15;
-            this.label4.Text = "低于";
+            this.label5.AutoSize = true;
+            this.label5.Location = new System.Drawing.Point(250, 99);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(68, 15);
+            this.label5.TabIndex = 17;
+            this.label5.Text = "DB被删除";
             // 
             // numericUpDownClean
             // 
@@ -266,14 +267,14 @@
             0,
             0});
             // 
-            // label5
+            // label4
             // 
-            this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(250, 99);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(68, 15);
-            this.label5.TabIndex = 17;
-            this.label5.Text = "DB被删除";
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(144, 99);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(37, 15);
+            this.label4.TabIndex = 15;
+            this.label4.Text = "低于";
             // 
             // timerCycle
             // 
@@ -282,7 +283,8 @@
             // 
             // timerClean
             // 
-            this.timerClean.Interval = 60000;
+            this.timerClean.Enabled = true;
+            this.timerClean.Interval = 600000;
             this.timerClean.Tick += new System.EventHandler(this.timerClean_Tick);
             // 
             // MainForm

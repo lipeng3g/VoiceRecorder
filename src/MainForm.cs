@@ -104,7 +104,7 @@ namespace VoiceRecorder
                 Top = (2 * index + 2) * ITEMS_MARGIN + 4,
                 AutoSize = true,
                 Text = deviceName,
-                Checked = true
+                Checked = index == -1
             };
 
             // Progress bar to display the Voice Peak
@@ -201,19 +201,11 @@ namespace VoiceRecorder
                 lblStatus.Text = "Recording";
                 _isRecording = true;
 
-                checkBoxClean.Enabled = false;
                 checkBoxCycle.Enabled = false;
-                numericUpDownClean.Enabled = false;
                 numericUpDownCycle.Enabled = false;
-                buttonClean.Enabled = false;
 
-                timerClean.Interval = (int)(numericUpDownClean.Value * 1000);
                 timerCycle.Interval = (int)(numericUpDownCycle.Value * 1000);
-                if (timerClean.Enabled)
-                { 
-                    timerClean.Start();
-                }
-                if (timerCycle.Enabled) 
+                if (checkBoxCycle.Checked) 
                 { 
                     timerCycle.Start();
                 }
@@ -231,11 +223,9 @@ namespace VoiceRecorder
                 lblStatus.Text = "Not recording";
                 _isRecording = false;
 
-                checkBoxClean.Enabled = true;
                 checkBoxCycle.Enabled = true;
-                numericUpDownClean.Enabled = true;
                 numericUpDownCycle.Enabled = true;
-                buttonClean.Enabled = true;
+                timerCycle.Stop();
 
                 foreach (var item in _allDevices)
                 {
@@ -337,8 +327,8 @@ namespace VoiceRecorder
                         continue;
                     }
 
-                    int minValue = 0;
-                    if (Int32.TryParse(parts[1], out minValue) && minValue < numericUpDownClean.Value)
+                    int maxValue = 0;
+                    if (Int32.TryParse(parts[2], out maxValue) && maxValue < numericUpDownClean.Value)
                     {
                         if (File.Exists(parts[0]))
                         {
@@ -362,6 +352,11 @@ namespace VoiceRecorder
                 File.Delete(filePath);
                 File.Move(tempFilePath, filePath);
             }
+        }
+
+        private void buttonClean_Click(object sender, EventArgs e)
+        {
+            timerClean_Tick(null, null);
         }
     }
 }
