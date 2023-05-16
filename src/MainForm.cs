@@ -15,6 +15,8 @@ namespace VoiceRecorder
         private Timer _timer = new Timer() { Interval = 1000 };
         private List<DeviceItem> _allDevices = new List<DeviceItem>();
         private string _path;
+        const int IMAGE_RECORD = 0;
+        const int IMAGE_STOP = 1;
 
         public MainForm()
         {
@@ -70,8 +72,10 @@ namespace VoiceRecorder
 
                     device.StreamWriter.Write(e.Buffer, 0, e.BytesRecorded);
                 }
-
-                WriteProgressSafe(device.Progress, Convert.ToInt32(100 * GetPeakValue(e) / (float)int.MaxValue));
+                int db = Convert.ToInt32(100 * GetPeakValue(e) / (float)int.MaxValue);
+                WriteProgressSafe(device.Progress, db);
+                device.MaxDb = device.MaxDb > db ? device.MaxDb : db;
+                device.MinDb = device.MinDb < db ? device.MinDb : db;
             };
 
             device.WaveIn.RecordingStopped += (sender, e) =>
@@ -97,7 +101,7 @@ namespace VoiceRecorder
             var chkDeviceName = new CheckBox()
             {
                 Left = 0,
-                Top = ITEMS_MARGIN + index * ITEMS_MARGIN + 4,
+                Top = (2 * index + 2) * ITEMS_MARGIN + 4,
                 AutoSize = true,
                 Text = deviceName,
                 Checked = true
@@ -106,11 +110,12 @@ namespace VoiceRecorder
             // Progress bar to display the Voice Peak
             var pgbDevice = new ProgressBar()
             {
-                Left = 200,
-                Top = ITEMS_MARGIN + index * ITEMS_MARGIN,
+                Left = 0,
+                Top = (2 * index + 3) * ITEMS_MARGIN,
                 Minimum = 0,
                 Maximum = 100,
-                Value = 0
+                Value = 0,
+                Width = 265
             };
 
             // WaveIn
@@ -133,7 +138,9 @@ namespace VoiceRecorder
                 Progress = pgbDevice,
                 Device = device,
                 WaveIn = waveIn,
-                Folder = _path
+                Folder = _path,
+                MaxDb = 0,
+                MinDb = 0,
             };
         }
 
@@ -183,11 +190,38 @@ namespace VoiceRecorder
             StopListeningAllDevices();
         }
 
-        private void BtnRecord_Click(object sender, EventArgs e)
+        private void StartRecord()
         {
-            const int IMAGE_RECORD = 0;
-            const int IMAGE_STOP = 1;
+            if (!_isRecording)
+            {
+                // Start the record
+                _watcher.Restart();
+                btnRecord.ImageIndex = IMAGE_STOP;
+                btnRecord.BackColor = System.Drawing.Color.Red;
+                lblStatus.Text = "Recording";
+                _isRecording = true;
 
+                checkBoxClean.Enabled = false;
+                checkBoxCycle.Enabled = false;
+                numericUpDownClean.Enabled = false;
+                numericUpDownCycle.Enabled = false;
+                buttonClean.Enabled = false;
+
+                timerClean.Interval = (int)(numericUpDownClean.Value * 1000);
+                timerCycle.Interval = (int)(numericUpDownCycle.Value * 1000);
+                if (timerClean.Enabled)
+                { 
+                    timerClean.Start();
+                }
+                if (timerCycle.Enabled) 
+                { 
+                    timerCycle.Start();
+                }
+            }
+        }
+
+        private void StopRecord()
+        {
             if (_isRecording)
             {
                 // Stop the record
@@ -197,6 +231,12 @@ namespace VoiceRecorder
                 lblStatus.Text = "Not recording";
                 _isRecording = false;
 
+                checkBoxClean.Enabled = true;
+                checkBoxCycle.Enabled = true;
+                numericUpDownClean.Enabled = true;
+                numericUpDownCycle.Enabled = true;
+                buttonClean.Enabled = true;
+
                 foreach (var item in _allDevices)
                 {
                     if (item.StreamWriter != null)
@@ -205,18 +245,28 @@ namespace VoiceRecorder
                         item.StreamWriter.Dispose();
                         item.StreamWriter = null;
                     }
+                    item.SaveInfo();
+                    //重置最大最小值
+                    item.MaxDb = 0;
+                    item.MinDb = 0;
                 }
 
                 Process.Start(_path);
             }
+        }
+
+        private void BtnRecord_Click(object sender, EventArgs e)
+        {
+
+            if (_isRecording)
+            {
+                // Stop the record
+                StopRecord();
+            }
             else
             {
                 // Start the record
-                _watcher.Restart();
-                btnRecord.ImageIndex = IMAGE_STOP;
-                btnRecord.BackColor = System.Drawing.Color.Red;
-                lblStatus.Text = "Recording";
-                _isRecording = true;
+                StartRecord();
             }
         }
 
@@ -260,6 +310,58 @@ namespace VoiceRecorder
             return _folder;
         }
 
+        private void timerCycle_Tick(object sender, EventArgs e)
+        {
+            StopRecord();
+            StartRecord();
+        }
 
+        private void timerClean_Tick(object sender, EventArgs e)
+        {
+            string filePath = Path.Combine(_path, "DbInfo.txt");
+            if (!File.Exists(filePath))
+            {
+                Console.WriteLine("文件不存在：" + filePath);
+                return;
+            }
+            lock (filePath)
+            {
+                string[] lines = File.ReadAllLines(filePath);
+                string[] parts;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    parts = lines[i].Split(new string[] { "___" }, StringSplitOptions.None);
+                    if (parts.Length != 3)
+                    {
+                        Console.WriteLine("数据格式不正确：" + lines[i]);
+                        continue;
+                    }
+
+                    int minValue = 0;
+                    if (Int32.TryParse(parts[1], out minValue) && minValue < numericUpDownClean.Value)
+                    {
+                        if (File.Exists(parts[0]))
+                        {
+                            File.Delete(parts[0]);
+                        }
+                        lines[i] = null;
+                    }
+                }
+
+                string tempFilePath = Path.Combine(_path, "_temp.txt");
+                using (StreamWriter sw = new StreamWriter(tempFilePath))
+                {
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        if (lines[i] != null)
+                        {
+                            sw.WriteLine(lines[i]);
+                        }
+                    }
+                }
+                File.Delete(filePath);
+                File.Move(tempFilePath, filePath);
+            }
+        }
     }
 }
